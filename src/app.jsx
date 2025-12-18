@@ -51,7 +51,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'heartfy-prod-v1';
+const appId = 'heartfy-prod-v1';
 
 const ADMIN_EMAIL = "admin@heartfy.com";
 const INTERESTS_OPTIONS = [
@@ -76,21 +76,13 @@ export default function App() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Inicialização Auth
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-      } catch (e) { console.error("Erro na autenticação:", e); }
-    };
-    initAuth();
     const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
     return () => unsubscribe();
   }, []);
 
+  // Sincronização de Perfil
   useEffect(() => {
     if (!user) return;
     const sync = async () => {
@@ -128,6 +120,7 @@ export default function App() {
     sync();
   }, [user]);
 
+  // Listeners de Dados
   useEffect(() => {
     if (!user) return;
     const unsubPosts = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'posts'), (s) => setPosts(s.docs.map(d => ({id: d.id, ...d.data()}))));
@@ -138,6 +131,7 @@ export default function App() {
     return () => { unsubPosts(); unsubUsers(); unsubColl(); unsubConfig(); unsubReports(); };
   }, [user]);
 
+  // Função de Login via Google
   const handleGoogleLogin = async () => {
     try {
       const provider = new GoogleAuthProvider();
@@ -309,20 +303,12 @@ export default function App() {
   const AdminPanel = () => {
     const [activeTab, setActiveTab] = useState('users');
     const [newBadge, setNewBadge] = useState({ label: '', type: 'blue' });
-    const [newWord, setNewWord] = useState('');
     const addBadge = async () => {
       if (!newBadge.label) return;
       const updated = { ...config, customBadges: [...(config.customBadges || []), { ...newBadge, id: Date.now() }] };
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'global'), updated);
       setNewBadge({ label: '', type: 'blue' });
       showMsg("Selo criado!");
-    };
-    const addWord = async () => {
-      if (!newWord) return;
-      const updated = { ...config, forbiddenWords: [...(config.forbiddenWords || []), newWord.toLowerCase()] };
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'global'), updated);
-      setNewWord('');
-      showMsg("Bloqueado!");
     };
     return (
       <div className="pt-24 max-w-7xl mx-auto px-4 pb-40">
@@ -386,7 +372,18 @@ export default function App() {
         )}
       </main>
       <Footer />
-      {showAuthModal && (<div className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-xl flex items-center justify-center p-6"><div className={`w-full max-w-md p-12 rounded-[4rem] relative ${isDarkMode ? 'bg-zinc-900 border border-zinc-800' : 'bg-white shadow-2xl'}`}><button onClick={() => setShowAuthModal(false)} className="absolute top-10 right-10 p-2"><X/></button><h2 className="text-5xl font-black text-rose-500 text-center mb-10">HEARTFY</h2><button onClick={handleGoogleLogin} className="w-full py-5 bg-white border-4 border-zinc-50 rounded-[2rem] font-black flex items-center justify-center gap-4 hover:shadow-xl transition-all"><img src="[https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg](https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg)" className="w-6 h-6" /> Entrar com Google</button></div></div>)}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-xl flex items-center justify-center p-6">
+          <div className={`w-full max-w-md p-12 rounded-[4rem] relative ${isDarkMode ? 'bg-zinc-900 border border-zinc-800' : 'bg-white shadow-2xl'}`}>
+            <button onClick={() => setShowAuthModal(false)} className="absolute top-10 right-10 p-2"><X/></button>
+            <h2 className="text-5xl font-black text-rose-500 text-center mb-10">HEARTFY</h2>
+            <button onClick={handleGoogleLogin} className="w-full py-5 bg-white border-4 border-zinc-50 rounded-[2rem] font-black flex items-center justify-center gap-4 hover:shadow-xl transition-all">
+              <img src="[https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg](https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg)" className="w-6 h-6" alt="Google Logo" /> 
+              Entrar com Google
+            </button>
+          </div>
+        </div>
+      )}
       {toast && (<div className="fixed bottom-10 left-1/2 -translate-x-1/2 px-10 py-5 bg-zinc-950 text-white rounded-full font-black text-sm shadow-2xl z-[1000] flex items-center gap-4"><div className="w-2 h-2 bg-rose-500 rounded-full animate-ping"></div> {toast.msg}</div>)}
     </div>
   );
