@@ -1,26 +1,500 @@
-{
-  "name": "heartfy",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "lucide-react": "^0.284.0",
-    "firebase": "^10.4.0"
-  },
-  "devDependencies": {
-    "@types/react": "^18.2.15",
-    "@types/react-dom": "^18.2.7",
-    "@vitejs/plugin-react": "^4.0.3",
-    "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.31",
-    "tailwindcss": "^3.3.3",
-    "vite": "^4.4.5"
-  }
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { 
+  Heart, Search, User, PlusCircle, Bell, Settings, LogOut, 
+  ShieldCheck, Star, Trash2, Ban, CheckCircle, Flag, 
+  MessageCircle, Share2, Download, Image as ImageIcon, 
+  Moon, Sun, LayoutGrid, Users, BarChart3, Globe, 
+  Mail, Lock, Smartphone, ChevronRight, X, MoreHorizontal,
+  Plus, Bookmark, Eye, TrendingUp, Info, HelpCircle, CreditCard,
+  Send, Smile, Mic, Video, MapPin, Hash, Filter, DollarSign,
+  PieChart, AlertTriangle, FileText, Briefcase, Camera, ChevronDown,
+  Lock as LockIcon, Unlock, UserPlus, UserCheck, MessageSquare, AtSign,
+  HeartOff, RefreshCw, UploadCloud, Link as LinkIcon, Sticker, Music,
+  History, Target, MoreVertical
+} from 'lucide-react';
+import { initializeApp } from 'firebase/app';
+import { 
+  getAuth, 
+  onAuthStateChanged, 
+  signInAnonymously, 
+  signInWithCustomToken,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut
+} from 'firebase/auth';
+import { 
+  getFirestore, 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  onSnapshot, 
+  query, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc,
+  where,
+  serverTimestamp,
+  increment
+} from 'firebase/firestore';
+
+// --- CONFIGURAÇÃO FIREBASE COM FALLBACK PARA EVITAR TELA EM BRANCO ---
+let firebaseConfig = {};
+try {
+  firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+} catch (e) {
+  console.error("Firebase config parsing error:", e);
+}
+
+// Configurações padrão para evitar crash se as variáveis não estiverem no ambiente
+const finalConfig = {
+  apiKey: firebaseConfig.apiKey || "",
+  authDomain: firebaseConfig.authDomain || "",
+  projectId: firebaseConfig.projectId || "",
+  storageBucket: firebaseConfig.storageBucket || "",
+  messagingSenderId: firebaseConfig.messagingSenderId || "",
+  appId: firebaseConfig.appId || ""
+};
+
+const app = initializeApp(finalConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'heartfy-prod-v1';
+
+// --- CONSTANTES ---
+const ADMIN_EMAIL = "admin@heartfy.com";
+const INTERESTS_OPTIONS = [
+  "Fotos", "Amor", "Casais", "Tatuagens", "Carros", "IA", "Papel de Parede", 
+  "Patterns", "Decoração", "Moda", "Homens", "Mulheres", "Comida", "Locais", 
+  "Objetos", "Desenhos", "Animes", "Arquitetura", "Design"
+];
+
+// --- SUBCOMPONENTES (FORA DO APP PARA EVITAR REFERENCE ERRORS E RE-RENDERS) ---
+
+const Badge = ({ badges }) => {
+  if (!badges || !badges.length) return null;
+  return badges.map((b, i) => (
+    <div key={i} className="group relative inline-block ml-1">
+      {b.type === 'gold' ? <Star size={14} className="text-amber-500 fill-amber-500"/> : <ShieldCheck size={14} className="text-blue-500 fill-blue-500"/>}
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-zinc-900 text-white text-[10px] px-2 py-1 rounded font-black uppercase whitespace-nowrap z-50 shadow-xl border border-zinc-800">
+        {b.label}
+      </div>
+    </div>
+  ));
+};
+
+const Header = ({ setView, view, isDarkMode, setIsDarkMode, currentUserData, setShowProfileMenu, showProfileMenu, setShowAuthModal, searchTerm, setSearchTerm }) => (
+  <header className={`fixed top-0 w-full z-50 h-16 border-b transition-all duration-300 ${isDarkMode ? 'bg-zinc-950 border-zinc-800 text-white' : 'bg-white/95 backdrop-blur-md border-zinc-100 shadow-sm'}`}>
+    <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
+      <div className="flex items-center gap-8">
+        <h1 onClick={() => setView('home')} className="text-2xl font-black tracking-tighter text-rose-500 cursor-pointer hover:scale-105 transition-all">HEARTFY</h1>
+        <nav className="hidden md:flex gap-6 text-[10px] font-black uppercase tracking-widest">
+          <button onClick={() => setView('home')} className={view === 'home' ? 'text-rose-500' : 'text-zinc-500'}>Explorar</button>
+          <button onClick={() => setView('pulse')} className={view === 'pulse' ? 'text-rose-500' : 'text-zinc-500'}>Pulse</button>
+        </nav>
+      </div>
+      <div className="flex-1 max-w-lg mx-8 relative">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+        <input 
+          type="text" placeholder="Pesquisar inspirações..." 
+          value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+          className={`w-full pl-12 pr-4 py-2.5 rounded-full text-sm outline-none transition-all ${isDarkMode ? 'bg-zinc-900 border border-zinc-800' : 'bg-zinc-100 border-transparent focus:bg-white focus:border-rose-200'}`} 
+        />
+      </div>
+      <div className="flex items-center gap-4">
+        <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2">{isDarkMode ? <Sun size={20}/> : <Moon size={20}/>}</button>
+        {currentUserData ? (
+          <div className="relative">
+            <img 
+              src={currentUserData.profilePic} 
+              className="w-9 h-9 rounded-full cursor-pointer border-2 border-rose-100 object-cover" 
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              alt="Avatar"
+            />
+            {showProfileMenu && (
+              <div className={`absolute right-0 mt-3 w-56 rounded-2xl shadow-2xl border p-2 z-[100] ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white text-zinc-900'}`}>
+                <button onClick={() => { setView('profile'); setShowProfileMenu(false); }} className="w-full text-left p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl flex items-center gap-3 text-sm font-bold transition-all"><User size={18}/> Perfil</button>
+                <button onClick={() => { setView('global'); setShowProfileMenu(false); }} className="w-full text-left p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl flex items-center gap-3 text-sm font-bold transition-all"><Globe size={18}/> Global</button>
+                {currentUserData.isAdmin && <button onClick={() => { setView('admin'); setShowProfileMenu(false); }} className="w-full text-left p-3 hover:bg-amber-50 dark:hover:bg-amber-900/10 text-amber-600 rounded-xl flex items-center gap-3 text-sm font-black transition-all"><ShieldCheck size={18}/> Admin</button>}
+                <button onClick={() => signOut(auth)} className="w-full text-left p-3 text-rose-500 rounded-xl flex items-center gap-3 text-sm font-bold transition-all"><LogOut size={18}/> Sair</button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button onClick={() => setShowAuthModal(true)} className="bg-rose-500 text-white px-8 py-2 rounded-full font-black text-xs uppercase hover:bg-rose-600 transition-all">Entrar</button>
+        )}
+      </div>
+    </div>
+  </header>
+);
+
+const Footer = ({ isDarkMode }) => (
+  <footer className={`mt-40 py-24 border-t ${isDarkMode ? 'bg-zinc-950 border-zinc-800 text-zinc-400' : 'bg-white border-zinc-100 text-zinc-500'}`}>
+    <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-12 text-sm font-bold uppercase">
+      <div className="col-span-2 normal-case font-medium">
+        <h2 className="text-3xl font-black text-rose-500 mb-6">HEARTFY</h2>
+        <p className="max-w-xs leading-relaxed">Onde as imagens encontram sentimentos. Colecione inspiração todos os dias.</p>
+      </div>
+      <div>
+        <h4 className="mb-8 opacity-50">Explorar</h4>
+        <ul className="space-y-4 text-[10px] tracking-widest">
+          <li className="hover:text-rose-500 cursor-pointer">Sobre Nós</li>
+          <li className="hover:text-rose-500 cursor-pointer">Blog</li>
+          <li className="hover:text-rose-500 cursor-pointer">API</li>
+        </ul>
+      </div>
+      <div>
+        <h4 className="mb-8 opacity-50">Suporte</h4>
+        <ul className="space-y-4 text-[10px] tracking-widest">
+          <li className="hover:text-rose-500 cursor-pointer">FAQ</li>
+          <li className="hover:text-rose-500 cursor-pointer">Ajuda</li>
+          <li className="hover:text-rose-500 cursor-pointer">Segurança</li>
+        </ul>
+      </div>
+      <div>
+        <h4 className="mb-8 opacity-50">Legal</h4>
+        <ul className="space-y-4 text-[10px] tracking-widest">
+          <li className="hover:text-rose-500 cursor-pointer">Privacidade</li>
+          <li className="hover:text-rose-500 cursor-pointer">Termos</li>
+          <li className="hover:text-rose-500 cursor-pointer">Cookies</li>
+        </ul>
+      </div>
+    </div>
+    <div className="max-w-7xl mx-auto px-4 mt-20 pt-10 border-t border-zinc-100 dark:border-zinc-900 flex justify-between text-[10px] font-black opacity-40">
+      <span>© 2025 Heartfy. Viva com beleza.</span>
+      <div className="flex gap-8"><span>Português (Brasil)</span><span>English</span></div>
+    </div>
+  </footer>
+);
+
+// --- COMPONENTE PRINCIPAL APP ---
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [currentUserData, setCurrentUserData] = useState(null);
+  const [view, setView] = useState('home'); 
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [posts, setPosts] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [collections, setCollections] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [config, setConfig] = useState({ forbiddenWords: [], customBadges: [], stripeKey: '' });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedPost, setSelectedPost] = useState(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  // Inicialização Auth (RULE 3)
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (e) { console.error("Erro na autenticação:", e); }
+    };
+    initAuth();
+    const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
+    return () => unsubscribe();
+  }, []);
+
+  // Sincronização de Perfil
+  useEffect(() => {
+    if (!user) return;
+    const sync = async () => {
+      const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
+      const snap = await getDoc(userRef);
+      const isAdm = user.email === ADMIN_EMAIL;
+
+      if (!snap.exists()) {
+        const initialData = {
+          uid: user.uid,
+          name: user.displayName || "Inspirador(a)",
+          username: user.email?.split('@')[0] || `user_${Math.random().toString(36).substr(2, 5)}`,
+          bio: isAdm ? "Canal Oficial do Heartfy" : "",
+          profilePic: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`,
+          headerPic: "https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1200",
+          followers: [],
+          following: ["admin-uid"], 
+          likedPosts: [],
+          likedCollections: [],
+          badges: isAdm ? [{id: 'official', label: 'Canal Oficial', type: 'gold'}] : [],
+          isAdmin: isAdm,
+          isVerified: isAdm,
+          interests: [],
+          email: user.email || "",
+          createdAt: Date.now()
+        };
+        await setDoc(userRef, initialData);
+        setCurrentUserData(initialData);
+        if (!user.isAnonymous) setView('onboarding');
+      } else {
+        const data = snap.data();
+        setCurrentUserData(data);
+        if (!data.interests?.length && !data.isAdmin && !user.isAnonymous) setView('onboarding');
+      }
+    };
+    sync();
+  }, [user]);
+
+  // Listeners Firestore (RULE 1 & 2)
+  useEffect(() => {
+    if (!user) return;
+    
+    const unsubPosts = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'posts'), (s) => setPosts(s.docs.map(d => ({id: d.id, ...d.data()}))));
+    const unsubUsers = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), (s) => setUsers(s.docs.map(d => ({id: d.id, ...d.data()}))));
+    const unsubColl = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'collections'), (s) => setCollections(s.docs.map(d => ({id: d.id, ...d.data()}))));
+    const unsubConfig = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'global'), (s) => s.exists() && setConfig(s.data()));
+    const unsubReports = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'reports'), (s) => setReports(s.docs.map(d => ({id: d.id, ...d.data()}))));
+
+    return () => { unsubPosts(); unsubUsers(); unsubColl(); unsubConfig(); unsubReports(); };
+  }, [user]);
+
+  const sanitize = (text) => {
+    if (!text) return "";
+    let clean = text.replace(/(https?:\/\/[^\s]+)/g, "[Link Removido]");
+    config.forbiddenWords?.forEach(word => {
+      const regex = new RegExp(`\\b${word}\\b`, 'gi');
+      clean = clean.replace(regex, '***');
+    });
+    return clean;
+  };
+
+  const showMsg = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleLike = async (postId) => {
+    if (!user || (user.isAnonymous && !currentUserData?.isAdmin)) return setShowAuthModal(true);
+    const myRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
+    const postRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', postId);
+    const isLiked = currentUserData?.likedPosts?.includes(postId);
+    const newList = isLiked ? currentUserData.likedPosts.filter(i => i !== postId) : [...(currentUserData.likedPosts || []), postId];
+    await updateDoc(myRef, { likedPosts: newList });
+    const snap = await getDoc(postRef);
+    if (snap.exists()) {
+      const likes = snap.data().likes || [];
+      await updateDoc(postRef, { likes: isLiked ? likes.filter(u => u !== user.uid) : [...likes, user.uid] });
+    }
+    showMsg(isLiked ? "Removido" : "Favoritado!");
+  };
+
+  const handleFollow = async (targetUid) => {
+    if (!user || (user.isAnonymous && !currentUserData?.isAdmin)) return setShowAuthModal(true);
+    const myRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
+    const isFollowing = currentUserData?.following?.includes(targetUid);
+    const newFollowing = isFollowing ? currentUserData.following.filter(id => id !== targetUid) : [...(currentUserData.following || []), targetUid];
+    await updateDoc(myRef, { following: newFollowing });
+    showMsg(isFollowing ? "Deixou de seguir" : "Seguindo!");
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      setShowAuthModal(false);
+    } catch (e) { showMsg("Erro login", "error"); }
+  };
+
+  const homePosts = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+    return posts.filter(p => {
+      const matchesSearch = p.title?.toLowerCase().includes(term) || p.tags?.some(t => t.toLowerCase().includes(term));
+      const matchesInterests = !currentUserData?.interests?.length || p.isAdminPost || p.tags?.some(t => currentUserData.interests.includes(t));
+      return matchesSearch && matchesInterests;
+    }).sort((a, b) => (b.isAdminPost ? 1 : 0) - (a.isAdminPost ? 1 : 0));
+  }, [posts, searchTerm, currentUserData]);
+
+  // --- VIEWS INTERNAS ---
+
+  const HomeView = () => (
+    <div className="pt-24 max-w-7xl mx-auto px-4 pb-32">
+      <div className="flex gap-4 overflow-x-auto pb-10 no-scrollbar mb-4">
+        {users.slice(0, 15).map(u => (
+          <div key={u.uid} className="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer group">
+            <div className="w-16 h-16 rounded-full p-0.5 border-2 border-rose-500 group-hover:scale-105 transition-transform">
+              <img src={u.profilePic} className="w-full h-full rounded-full object-cover" alt={u.username} />
+            </div>
+            <span className="text-[10px] font-black text-zinc-500">@{u.username}</span>
+          </div>
+        ))}
+      </div>
+      <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-6 space-y-6">
+        {homePosts.map(post => (
+          <div 
+            key={post.id} 
+            className="relative group break-inside-avoid rounded-[2.5rem] overflow-hidden cursor-pointer shadow-lg hover:shadow-2xl transition-all"
+            onClick={() => { setSelectedPost(post); setView('detail'); }}
+          >
+            <img src={post.url} className="w-full h-auto object-cover" alt={post.title} />
+            <div className="absolute inset-0 bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+              <Heart size={80} className="text-white fill-white animate-pulse" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const PulseView = () => {
+    const [pulseText, setPulseText] = useState("");
+    const postPulse = async () => {
+      if (!pulseText.trim() || !user) return;
+      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'posts'), {
+        type: 'pulse', content: sanitize(pulseText), userId: user.uid, createdAt: Date.now()
+      });
+      setPulseText("");
+      showMsg("Pulse enviado!");
+    };
+    return (
+      <div className="pt-24 max-w-2xl mx-auto px-4 pb-40">
+        <div className={`p-8 rounded-[2.5rem] mb-12 shadow-xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-100'}`}>
+          <textarea 
+            value={pulseText} onChange={(e) => setPulseText(e.target.value)}
+            placeholder="O que está a pulsar?"
+            className="w-full bg-transparent border-none focus:ring-0 text-lg font-medium resize-none min-h-[100px]"
+          ></textarea>
+          <div className="flex justify-end mt-4">
+            <button onClick={postPulse} className="bg-rose-500 text-white px-10 py-3 rounded-full font-black">Pulsar</button>
+          </div>
+        </div>
+        <div className="space-y-6">
+          {posts.filter(p => p.type === 'pulse').sort((a,b) => b.createdAt - a.createdAt).map(pulse => (
+            <div key={pulse.id} className={`p-8 rounded-[2.5rem] border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white'}`}>
+              <div className="flex gap-4">
+                <img src={users.find(u => u.uid === pulse.userId)?.profilePic} className="w-12 h-12 rounded-full" alt="U" />
+                <div className="flex-1">
+                  <p className="font-black">@{users.find(u => u.uid === pulse.userId)?.username}</p>
+                  <p className="mt-2 opacity-70">{pulse.content}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const AdminPanel = () => {
+    const [tab, setTab] = useState('users');
+    return (
+      <div className="pt-24 max-w-7xl mx-auto px-4 pb-40">
+        <h2 className="text-4xl font-black mb-10">Admin Master</h2>
+        <div className="bg-white dark:bg-zinc-900 rounded-[3rem] overflow-hidden border">
+           <table className="w-full text-left">
+              <thead><tr className="bg-zinc-50 dark:bg-zinc-800 text-xs font-black uppercase text-zinc-400 tracking-widest"><th className="p-8">Usuário</th><th className="p-8">Badges</th><th className="p-8 text-right">Ações</th></tr></thead>
+              <tbody>
+                {users.map(u => (
+                  <tr key={u.uid} className="border-t border-zinc-100 dark:border-zinc-800">
+                    <td className="p-8 flex items-center gap-4"><img src={u.profilePic} className="w-10 h-10 rounded-full" alt="P"/><b>@{u.username}</b></td>
+                    <td className="p-8"><Badge badges={u.badges}/></td>
+                    <td className="p-8 text-right"><button className="text-rose-500 font-bold">Gerenciar</button></td>
+                  </tr>
+                ))}
+              </tbody>
+           </table>
+        </div>
+      </div>
+    );
+  };
+
+  const Onboarding = () => {
+    const [selected, setSelected] = useState([]);
+    const toggle = (i) => setSelected(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i]);
+    const save = async () => {
+      if (selected.length < 3) return showMsg("Escolha 3!", "error");
+      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), { interests: selected });
+      setCurrentUserData(prev => ({ ...prev, interests: selected }));
+      setView('home');
+    };
+    return (
+      <div className="fixed inset-0 z-[200] bg-white dark:bg-zinc-950 flex items-center justify-center p-8">
+        <div className="max-w-3xl w-full text-center">
+          <h2 className="text-5xl font-black mb-8">O que você ama?</h2>
+          <div className="flex flex-wrap justify-center gap-3 mb-12">
+            {INTERESTS_OPTIONS.map(i => (
+              <button key={i} onClick={() => toggle(i)} className={`px-8 py-4 rounded-full font-black border-2 transition-all ${selected.includes(i) ? 'bg-rose-500 border-rose-500 text-white' : 'border-zinc-100'}`}>{i}</button>
+            ))}
+          </div>
+          <button onClick={save} className="bg-zinc-900 text-white px-20 py-6 rounded-[2.5rem] font-black text-xl">Entrar no Heartfy</button>
+        </div>
+      </div>
+    );
+  };
+
+  // --- RENDERIZAÇÃO FINAL ---
+  return (
+    <div className={`min-h-screen transition-all duration-700 ${isDarkMode ? 'bg-black text-white' : 'bg-[#FAFAFA] text-zinc-900'} font-sans antialiased`}>
+      <Header 
+        setView={setView} view={view} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} 
+        currentUserData={currentUserData} setShowProfileMenu={setShowProfileMenu} 
+        showProfileMenu={showProfileMenu} setShowAuthModal={setShowAuthModal}
+        searchTerm={searchTerm} setSearchTerm={setSearchTerm}
+      />
+      
+      <main className="min-h-screen">
+        {view === 'home' && <HomeView />}
+        {view === 'pulse' && <PulseView />}
+        {view === 'admin' && <AdminPanel />}
+        {view === 'onboarding' && <Onboarding />}
+        
+        {view === 'global' && (
+          <div className="pt-24 max-w-4xl mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {users.map(u => (
+              <div key={u.uid} className={`p-8 rounded-[3rem] border flex items-center justify-between ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white shadow-xl'}`}>
+                <div className="flex items-center gap-4">
+                  <img src={u.profilePic} className="w-16 h-16 rounded-full object-cover" alt="U" />
+                  <div><p className="font-black text-lg">@{u.username}</p><Badge badges={u.badges}/></div>
+                </div>
+                {u.uid !== user?.uid && (
+                  <button onClick={() => handleFollow(u.uid)} className={`px-6 py-2 rounded-full font-black text-xs ${currentUserData?.following?.includes(u.uid) ? 'bg-zinc-100' : 'bg-rose-500 text-white'}`}>
+                    {currentUserData?.following?.includes(u.uid) ? 'Seguindo' : 'Seguir'}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {view === 'detail' && selectedPost && (
+          <div className="pt-24 max-w-7xl mx-auto px-4 pb-40 animate-in fade-in slide-in-from-bottom-5">
+             <button onClick={() => setView('home')} className="mb-10 text-rose-500 font-black uppercase text-xs">Voltar</button>
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+                <img src={selectedPost.url} className="w-full rounded-[4rem] shadow-2xl border-4 border-white dark:border-zinc-800" alt="Pin" />
+                <div className="py-8">
+                   <h2 className="text-5xl font-black mb-6">{sanitize(selectedPost.title)}</h2>
+                   <p className="text-zinc-500 text-xl font-medium mb-12">{sanitize(selectedPost.description)}</p>
+                   <button onClick={() => handleLike(selectedPost.id)} className={`w-full py-6 rounded-[2.5rem] font-black text-xl flex items-center justify-center gap-4 transition-all ${currentUserData?.likedPosts?.includes(selectedPost.id) ? 'bg-zinc-950 text-white' : 'bg-rose-500 text-white shadow-2xl'}`}>
+                     <Heart className={currentUserData?.likedPosts?.includes(selectedPost.id) ? 'fill-current' : ''} size={28}/> Salvar no Perfil
+                   </button>
+                </div>
+             </div>
+          </div>
+        )}
+      </main>
+
+      <Footer isDarkMode={isDarkMode} />
+
+      {showAuthModal && (
+        <div className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-xl flex items-center justify-center p-6">
+          <div className={`w-full max-w-md p-12 rounded-[4rem] relative ${isDarkMode ? 'bg-zinc-900 border border-zinc-800' : 'bg-white'}`}>
+            <button onClick={() => setShowAuthModal(false)} className="absolute top-10 right-10 p-2"><X/></button>
+            <h2 className="text-5xl font-black text-rose-500 text-center mb-10">HEARTFY</h2>
+            <button onClick={handleGoogleLogin} className="w-full py-5 bg-white border-4 border-zinc-50 rounded-[2rem] font-black flex items-center justify-center gap-4 shadow-xl hover:shadow-2xl transition-all">
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-6 h-6" alt="G" /> Google Login
+            </button>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 px-10 py-5 bg-zinc-950 text-white rounded-full font-black text-sm shadow-2xl z-[1000] flex items-center gap-4 border border-zinc-800 animate-in slide-in-from-bottom-5">
+          <div className="w-2 h-2 bg-rose-500 rounded-full animate-ping"></div> {toast.msg}
+        </div>
+      )}
+    </div>
+  );
 }
