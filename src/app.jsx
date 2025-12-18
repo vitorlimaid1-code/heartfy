@@ -8,7 +8,7 @@ import {
   Plus, Bookmark, Eye, TrendingUp, Info, HelpCircle, CreditCard,
   Send, Smile, Mic, Video, MapPin, Hash, Filter, DollarSign,
   PieChart, AlertTriangle, FileText, Briefcase, Camera, ChevronDown,
-  Lock as LockIcon, Unlock, UserPlus, UserCheck, MessageSquare, AtSign,
+  Unlock, UserPlus, UserCheck, MessageSquare, AtSign,
   HeartOff, RefreshCw, UploadCloud, Link as LinkIcon, Sticker, Music,
   History, Target, MoreVertical
 } from 'lucide-react';
@@ -356,9 +356,9 @@ export default function App() {
           <div className="pt-24 max-w-7xl mx-auto px-4 pb-40 animate-in fade-in slide-in-from-bottom-5 duration-700">
              <button onClick={() => setView('home')} className="mb-10 text-rose-500 font-black uppercase text-xs tracking-widest flex items-center gap-2">Voltar</button>
              <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-                <img src={selectedPost.url} className="w-full rounded-[4rem] shadow-2xl border-4 border-white dark:border-zinc-800" />
+                <img src={selectedPost.url} className="w-full rounded-[4rem] shadow-2xl border-4 border-white dark:border-zinc-800" alt="Post" />
                 <div className="py-8">
-                   <div className="flex items-center justify-between mb-10 p-6 bg-white dark:bg-zinc-900 rounded-[2.5rem] border shadow-sm"><div className="flex items-center gap-4"><img src={users.find(u => u.uid === selectedPost.userId)?.profilePic} className="w-14 h-14 rounded-full" /><p className="font-black text-xl">@{users.find(u => u.uid === selectedPost.userId)?.username}</p></div><button onClick={() => handleFollow(selectedPost.userId)} className="bg-rose-500 text-white px-10 py-3 rounded-full font-black">Seguir</button></div>
+                   <div className="flex items-center justify-between mb-10 p-6 bg-white dark:bg-zinc-900 rounded-[2.5rem] border shadow-sm"><div className="flex items-center gap-4"><img src={users.find(u => u.uid === selectedPost.userId)?.profilePic} className="w-14 h-14 rounded-full" alt="Avatar" /><p className="font-black text-xl">@{users.find(u => u.uid === selectedPost.userId)?.username}</p></div><button onClick={() => handleFollow(selectedPost.userId)} className="bg-rose-500 text-white px-10 py-3 rounded-full font-black">Seguir</button></div>
                    <h2 className="text-5xl font-black tracking-tighter mb-6">{sanitize(selectedPost.title)}</h2>
                    <p className="text-zinc-500 text-xl font-medium mb-12">{sanitize(selectedPost.description)}</p>
                    <button onClick={() => handleLike(selectedPost.id)} className={`w-full py-6 rounded-[2.5rem] font-black text-xl flex items-center justify-center gap-4 transition-all ${currentUserData?.likedPosts?.includes(selectedPost.id) ? 'bg-zinc-950 text-white' : 'bg-rose-500 text-white shadow-2xl'}`}><Heart className={currentUserData?.likedPosts?.includes(selectedPost.id) ? 'fill-current' : ''} size={28}/> Salvar no Perfil</button>
