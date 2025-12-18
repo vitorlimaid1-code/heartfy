@@ -76,13 +76,11 @@ export default function App() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [toast, setToast] = useState(null);
 
-  // Inicialização Auth
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
     return () => unsubscribe();
   }, []);
 
-  // Sincronização de Perfil
   useEffect(() => {
     if (!user) return;
     const sync = async () => {
@@ -120,7 +118,6 @@ export default function App() {
     sync();
   }, [user]);
 
-  // Listeners de Dados
   useEffect(() => {
     if (!user) return;
     const unsubPosts = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'posts'), (s) => setPosts(s.docs.map(d => ({id: d.id, ...d.data()}))));
@@ -131,7 +128,6 @@ export default function App() {
     return () => { unsubPosts(); unsubUsers(); unsubColl(); unsubConfig(); unsubReports(); };
   }, [user]);
 
-  // Função de Login via Google
   const handleGoogleLogin = async () => {
     try {
       const provider = new GoogleAuthProvider();
