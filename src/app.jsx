@@ -38,14 +38,14 @@ import {
   increment
 } from 'firebase/firestore';
 
-// --- CONFIGURAÇÃO FIREBASE (Proteção contra variáveis indefinidas) ---
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-  apiKey: "AIzaSy...", // Mock para prevenção de crash em ambiente local sem config
-  authDomain: "heartfy.firebaseapp.com",
-  projectId: "heartfy",
-  storageBucket: "heartfy.appspot.com",
-  messagingSenderId: "123",
-  appId: "1:123:web:123"
+// --- CONFIGURAÇÃO FIREBASE ---
+const firebaseConfig = {
+  apiKey: "AIzaSyDSbmqfTYS8dt3BQDnqFRzicEXHWmqUDDc",
+  authDomain: "heartfy-2c58b.firebaseapp.com",
+  projectId: "heartfy-2c58b",
+  storageBucket: "heartfy-2c58b.firebasestorage.app",
+  messagingSenderId: "962356538144",
+  appId: "1:962356538144:web:cbfa91ce5abc6d63598545",
 };
 
 const app = initializeApp(firebaseConfig);
@@ -53,7 +53,6 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'heartfy-prod-v1';
 
-// --- CONSTANTES ---
 const ADMIN_EMAIL = "admin@heartfy.com";
 const INTERESTS_OPTIONS = [
   "Fotos", "Amor", "Casais", "Tatuagens", "Carros", "IA", "Papel de Parede", 
@@ -61,34 +60,22 @@ const INTERESTS_OPTIONS = [
   "Objetos", "Desenhos", "Animes", "Arquitetura", "Design"
 ];
 
-// --- COMPONENTE PRINCIPAL ---
 export default function App() {
-  // Estados de Sessão
   const [user, setUser] = useState(null);
   const [currentUserData, setCurrentUserData] = useState(null);
   const [view, setView] = useState('home'); 
   const [isDarkMode, setIsDarkMode] = useState(false);
-  
-  // Estados de Dados
   const [posts, setPosts] = useState([]);
   const [users, setUsers] = useState([]);
   const [collections, setCollections] = useState([]);
   const [reports, setReports] = useState([]);
-  const [config, setConfig] = useState({ 
-    forbiddenWords: [], 
-    customBadges: [], 
-    stripeKey: '' 
-  });
-
-  // Estados de UI
+  const [config, setConfig] = useState({ forbiddenWords: [], customBadges: [], stripeKey: '' });
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPost, setSelectedPost] = useState(null);
-  const [selectedCollection, setSelectedCollection] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [toast, setToast] = useState(null);
 
-  // --- RULE 3: INICIALIZAÇÃO AUTH ---
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -104,14 +91,12 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // --- SINCRONIZAÇÃO DE PERFIL ---
   useEffect(() => {
     if (!user) return;
     const sync = async () => {
       const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
       const snap = await getDoc(userRef);
       const isAdm = user.email === ADMIN_EMAIL;
-
       if (!snap.exists()) {
         const initialData = {
           uid: user.uid,
@@ -119,7 +104,7 @@ export default function App() {
           username: user.email?.split('@')[0] || `user_${Math.random().toString(36).substr(2, 5)}`,
           bio: isAdm ? "Canal Oficial do Heartfy" : "",
           profilePic: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`,
-          headerPic: "https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1200",
+          headerPic: "[https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1200](https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1200)",
           followers: [],
           following: ["admin-uid"], 
           likedPosts: [],
@@ -143,20 +128,28 @@ export default function App() {
     sync();
   }, [user]);
 
-  // --- RULE 1 & 2: LISTENERS ---
   useEffect(() => {
     if (!user) return;
-    
-    const unsubPosts = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'posts'), (s) => setPosts(s.docs.map(d => ({id: d.id, ...d.data()}))), (err) => console.error(err));
-    const unsubUsers = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), (s) => setUsers(s.docs.map(d => ({id: d.id, ...d.data()}))), (err) => console.error(err));
-    const unsubColl = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'collections'), (s) => setCollections(s.docs.map(d => ({id: d.id, ...d.data()}))), (err) => console.error(err));
-    const unsubConfig = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'global'), (s) => s.exists() && setConfig(s.data()), (err) => console.error(err));
-    const unsubReports = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'reports'), (s) => setReports(s.docs.map(d => ({id: d.id, ...d.data()}))), (err) => console.error(err));
-
+    const unsubPosts = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'posts'), (s) => setPosts(s.docs.map(d => ({id: d.id, ...d.data()}))));
+    const unsubUsers = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), (s) => setUsers(s.docs.map(d => ({id: d.id, ...d.data()}))));
+    const unsubColl = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'collections'), (s) => setCollections(s.docs.map(d => ({id: d.id, ...d.data()}))));
+    const unsubConfig = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'global'), (s) => s.exists() && setConfig(s.data()));
+    const unsubReports = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'reports'), (s) => setReports(s.docs.map(d => ({id: d.id, ...d.data()}))));
     return () => { unsubPosts(); unsubUsers(); unsubColl(); unsubConfig(); unsubReports(); };
   }, [user]);
 
-  // --- FUNÇÕES AUXILIARES ---
+  const handleGoogleLogin = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      setShowAuthModal(false);
+      showMsg("Bem-vindo(a)!");
+    } catch (e) {
+      console.error(e);
+      showMsg("Erro ao entrar", "error");
+    }
+  };
+
   const sanitize = (text) => {
     if (!text) return "";
     let clean = text.replace(/(https?:\/\/[^\s]+)/g, "[Link Removido]");
@@ -176,10 +169,8 @@ export default function App() {
     if (!user || (user.isAnonymous && !currentUserData?.isAdmin)) return setShowAuthModal(true);
     const myRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
     const postRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', postId);
-    
     const isLiked = currentUserData?.likedPosts?.includes(postId);
     const newList = isLiked ? currentUserData.likedPosts.filter(i => i !== postId) : [...(currentUserData.likedPosts || []), postId];
-
     await updateDoc(myRef, { likedPosts: newList });
     const snap = await getDoc(postRef);
     if (snap.exists()) {
@@ -207,8 +198,6 @@ export default function App() {
     }).sort((a, b) => (b.isAdminPost ? 1 : 0) - (a.isAdminPost ? 1 : 0));
   }, [posts, searchTerm, currentUserData]);
 
-  // --- SUBCOMPONENTES ---
-
   const Badge = ({ badges }) => {
     if (!badges || !badges.length) return null;
     return badges.map((b, i) => (
@@ -218,8 +207,6 @@ export default function App() {
       </div>
     ));
   };
-
-  // --- VIEWS ---
 
   const Header = () => (
     <header className={`fixed top-0 w-full z-50 h-16 border-b transition-all duration-300 ${isDarkMode ? 'bg-zinc-950 border-zinc-800 text-white' : 'bg-white/95 backdrop-blur-md border-zinc-100 shadow-sm'}`}>
@@ -243,12 +230,7 @@ export default function App() {
           <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2">{isDarkMode ? <Sun size={20}/> : <Moon size={20}/>}</button>
           {currentUserData ? (
             <div className="relative">
-              <img 
-                src={currentUserData.profilePic} 
-                className="w-9 h-9 rounded-full cursor-pointer border-2 border-rose-100" 
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                alt="Avatar"
-              />
+              <img src={currentUserData.profilePic} className="w-9 h-9 rounded-full cursor-pointer border-2 border-rose-100" onClick={() => setShowProfileMenu(!showProfileMenu)} />
               {showProfileMenu && (
                 <div className={`absolute right-0 mt-3 w-56 rounded-2xl shadow-2xl border p-2 z-[100] ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white'}`}>
                   <button onClick={() => { setView('profile'); setShowProfileMenu(false); }} className="w-full text-left p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl flex items-center gap-3 text-sm font-bold transition-all"><User size={18}/> Perfil</button>
@@ -280,20 +262,13 @@ export default function App() {
       </div>
       <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-6 space-y-6">
         {homePosts.map(post => (
-          <div 
-            key={post.id} 
-            className="relative group break-inside-avoid rounded-[2.5rem] overflow-hidden cursor-pointer shadow-lg hover:shadow-2xl transition-all duration-700"
-            onClick={() => { setSelectedPost(post); setView('detail'); }}
-          >
+          <div key={post.id} className="relative group break-inside-avoid rounded-[2.5rem] overflow-hidden cursor-pointer shadow-lg hover:shadow-2xl transition-all duration-700" onClick={() => { setSelectedPost(post); setView('detail'); }}>
             <img src={post.url} className="w-full h-auto object-cover" alt={post.title} />
             <div className="absolute inset-0 bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
               <Heart size={80} className="text-white fill-white animate-pulse" />
             </div>
             <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all z-10">
-              <button 
-                onClick={(e) => { e.stopPropagation(); handleLike(post.id); }}
-                className={`p-2.5 rounded-full backdrop-blur-xl transition-all ${currentUserData?.likedPosts?.includes(post.id) ? 'bg-rose-500 text-white' : 'bg-white/30 text-white hover:bg-rose-500'}`}
-              >
+              <button onClick={(e) => { e.stopPropagation(); handleLike(post.id); }} className={`p-2.5 rounded-full backdrop-blur-xl transition-all ${currentUserData?.likedPosts?.includes(post.id) ? 'bg-rose-500 text-white' : 'bg-white/30 text-white hover:bg-rose-500'}`}>
                 <Heart size={20} className={currentUserData?.likedPosts?.includes(post.id) ? 'fill-current' : ''} />
               </button>
             </div>
@@ -307,33 +282,22 @@ export default function App() {
     const [pulseText, setPulseText] = useState("");
     const postPulse = async () => {
       if (!pulseText.trim() || !user) return;
-      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'posts'), {
-        type: 'pulse', content: sanitize(pulseText), userId: user.uid, createdAt: Date.now(), likes: []
-      });
+      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'posts'), { type: 'pulse', content: sanitize(pulseText), userId: user.uid, createdAt: Date.now(), likes: [] });
       setPulseText("");
       showMsg("Pulse enviado!");
     };
     return (
       <div className="pt-24 max-w-2xl mx-auto px-4 pb-40">
         <div className={`p-8 rounded-[2.5rem] mb-12 shadow-xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-100'}`}>
-          <textarea 
-            value={pulseText} onChange={(e) => setPulseText(e.target.value)}
-            placeholder="O que está a pulsar agora?"
-            className="w-full bg-transparent border-none focus:ring-0 text-lg font-medium resize-none min-h-[100px]"
-          ></textarea>
-          <div className="flex justify-end mt-4">
-            <button onClick={postPulse} className="bg-rose-500 text-white px-10 py-3 rounded-full font-black hover:bg-rose-600 transition shadow-lg">Pulsar</button>
-          </div>
+          <textarea value={pulseText} onChange={(e) => setPulseText(e.target.value)} placeholder="O que está a pulsar agora?" className="w-full bg-transparent border-none focus:ring-0 text-lg font-medium resize-none min-h-[100px]"></textarea>
+          <div className="flex justify-end mt-4"><button onClick={postPulse} className="bg-rose-500 text-white px-10 py-3 rounded-full font-black hover:bg-rose-600 transition shadow-lg">Pulsar</button></div>
         </div>
         <div className="space-y-6">
           {posts.filter(p => p.type === 'pulse').sort((a,b) => b.createdAt - a.createdAt).map(pulse => (
             <div key={pulse.id} className={`p-8 rounded-[2.5rem] shadow-sm border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white'}`}>
               <div className="flex gap-4">
-                <img src={users.find(u => u.uid === pulse.userId)?.profilePic} className="w-12 h-12 rounded-full" alt="User" />
-                <div className="flex-1">
-                  <p className="font-black">@{users.find(u => u.uid === pulse.userId)?.username}</p>
-                  <p className="mt-2 text-zinc-600 dark:text-zinc-300 leading-relaxed">{pulse.content}</p>
-                </div>
+                <img src={users.find(u => u.uid === pulse.userId)?.profilePic} className="w-12 h-12 rounded-full" />
+                <div className="flex-1"><p className="font-black">@{users.find(u => u.uid === pulse.userId)?.username}</p><p className="mt-2 text-zinc-600 dark:text-zinc-300 leading-relaxed">{pulse.content}</p></div>
               </div>
             </div>
           ))}
@@ -346,7 +310,6 @@ export default function App() {
     const [activeTab, setActiveTab] = useState('users');
     const [newBadge, setNewBadge] = useState({ label: '', type: 'blue' });
     const [newWord, setNewWord] = useState('');
-
     const addBadge = async () => {
       if (!newBadge.label) return;
       const updated = { ...config, customBadges: [...(config.customBadges || []), { ...newBadge, id: Date.now() }] };
@@ -354,7 +317,6 @@ export default function App() {
       setNewBadge({ label: '', type: 'blue' });
       showMsg("Selo criado!");
     };
-
     const addWord = async () => {
       if (!newWord) return;
       const updated = { ...config, forbiddenWords: [...(config.forbiddenWords || []), newWord.toLowerCase()] };
@@ -362,66 +324,10 @@ export default function App() {
       setNewWord('');
       showMsg("Bloqueado!");
     };
-
     return (
       <div className="pt-24 max-w-7xl mx-auto px-4 pb-40">
-        <div className="flex items-center justify-between mb-12">
-          <h2 className="text-4xl font-black tracking-tighter">Painel Master</h2>
-          <div className="flex bg-zinc-100 dark:bg-zinc-800 p-2 rounded-[2rem]">
-            {['users', 'content', 'badges'].map(t => (
-              <button key={t} onClick={() => setActiveTab(t)} className={`px-6 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === t ? 'bg-white shadow-lg text-rose-500' : 'text-zinc-400'}`}>{t}</button>
-            ))}
-          </div>
-        </div>
-        {activeTab === 'users' && (
-          <div className="bg-white dark:bg-zinc-900 rounded-[3rem] overflow-hidden border">
-            <table className="w-full text-left">
-              <thead><tr className="bg-zinc-50 dark:bg-zinc-800 text-[10px] font-black uppercase text-zinc-400"><th className="p-8">Membro</th><th className="p-8">Badges</th><th className="p-8 text-right">Ações</th></tr></thead>
-              <tbody>
-                {users.map(u => (
-                  <tr key={u.uid} className="border-t border-zinc-100 dark:border-zinc-800">
-                    <td className="p-8 flex items-center gap-4"><img src={u.profilePic} className="w-10 h-10 rounded-full" alt="U"/><b>@{u.username}</b></td>
-                    <td className="p-8"><Badge badges={u.badges}/></td>
-                    <td className="p-8 text-right">
-                       <select className="bg-zinc-100 dark:bg-zinc-800 p-2 rounded-xl text-[10px] font-black" onChange={async (e) => {
-                         const b = config.customBadges?.find(x => x.id.toString() === e.target.value);
-                         if (!b) return;
-                         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', u.uid), { badges: [...(u.badges || []), b] });
-                         showMsg("Concedido!");
-                       }}>
-                         <option>Conceder...</option>
-                         {config.customBadges?.map(cb => <option key={cb.id} value={cb.id}>{cb.label}</option>)}
-                       </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {activeTab === 'content' && (
-          <div className="p-10 bg-white dark:bg-zinc-900 rounded-[3rem] border max-w-xl">
-             <h3 className="font-black mb-6">Bloquear Palavras</h3>
-             <div className="flex gap-2">
-                <input value={newWord} onChange={e => setNewWord(e.target.value)} placeholder="Palavra..." className="flex-1 p-3 bg-zinc-50 rounded-xl outline-none" />
-                <button onClick={addWord} className="bg-rose-500 text-white px-6 rounded-xl font-bold">Add</button>
-             </div>
-             <div className="flex flex-wrap gap-2 mt-6">
-                {config.forbiddenWords?.map(w => <span key={w} className="px-3 py-1 bg-rose-50 text-rose-500 rounded-full text-xs font-bold">{w}</span>)}
-             </div>
-          </div>
-        )}
-        {activeTab === 'badges' && (
-          <div className="p-10 bg-white dark:bg-zinc-900 rounded-[3rem] border max-w-xl">
-             <h3 className="font-black mb-6">Novo Selo</h3>
-             <input value={newBadge.label} onChange={e => setNewBadge({...newBadge, label: e.target.value})} placeholder="Ex: Influencer" className="w-full p-4 bg-zinc-50 rounded-2xl mb-4 outline-none" />
-             <div className="flex gap-2 mb-4">
-                <button onClick={() => setNewBadge({...newBadge, type: 'blue'})} className={`flex-1 p-3 rounded-xl border-2 ${newBadge.type === 'blue' ? 'border-blue-500' : ''}`}>Azul</button>
-                <button onClick={() => setNewBadge({...newBadge, type: 'gold'})} className={`flex-1 p-3 rounded-xl border-2 ${newBadge.type === 'gold' ? 'border-amber-500' : ''}`}>Ouro</button>
-             </div>
-             <button onClick={addBadge} className="w-full py-4 bg-zinc-950 text-white rounded-2xl font-black">Criar</button>
-          </div>
-        )}
+        <div className="flex items-center justify-between mb-12"><h2 className="text-4xl font-black tracking-tighter">Painel Master</h2><div className="flex bg-zinc-100 dark:bg-zinc-800 p-2 rounded-[2rem]">{['users', 'content', 'badges'].map(t => (<button key={t} onClick={() => setActiveTab(t)} className={`px-6 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === t ? 'bg-white shadow-lg text-rose-500' : 'text-zinc-400'}`}>{t}</button>))}</div></div>
+        {activeTab === 'users' && (<div className="bg-white dark:bg-zinc-900 rounded-[3rem] overflow-hidden border"><table className="w-full text-left"><thead><tr className="bg-zinc-50 dark:bg-zinc-800 text-[10px] font-black uppercase text-zinc-400"><th className="p-8">Membro</th><th className="p-8">Badges</th><th className="p-8 text-right">Ações</th></tr></thead><tbody>{users.map(u => (<tr key={u.uid} className="border-t border-zinc-100 dark:border-zinc-800"><td className="p-8 flex items-center gap-4"><img src={u.profilePic} className="w-10 h-10 rounded-full" /><b>@{u.username}</b></td><td className="p-8"><Badge badges={u.badges}/></td><td className="p-8 text-right"><select className="bg-zinc-100 dark:bg-zinc-800 p-2 rounded-xl text-[10px] font-black" onChange={async (e) => { const b = config.customBadges?.find(x => x.id.toString() === e.target.value); if (!b) return; await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', u.uid), { badges: [...(u.badges || []), b] }); showMsg("Concedido!"); }}><option>Conceder...</option>{config.customBadges?.map(cb => <option key={cb.id} value={cb.id}>{cb.label}</option>)}</select></td></tr>))}</tbody></table></div>)}
       </div>
     );
   };
@@ -439,11 +345,7 @@ export default function App() {
       <div className="fixed inset-0 z-[200] bg-white dark:bg-zinc-950 flex items-center justify-center p-8">
         <div className="max-w-3xl w-full text-center">
           <h2 className="text-5xl font-black mb-6 tracking-tighter">O que faz o seu coração bater?</h2>
-          <div className="flex flex-wrap justify-center gap-3 mb-12">
-            {INTERESTS_OPTIONS.map(i => (
-              <button key={i} onClick={() => toggle(i)} className={`px-8 py-4 rounded-full font-black border-2 transition-all ${selected.includes(i) ? 'bg-rose-500 border-rose-500 text-white' : 'border-zinc-100 text-zinc-400'}`}>{i}</button>
-            ))}
-          </div>
+          <div className="flex flex-wrap justify-center gap-3 mb-12">{INTERESTS_OPTIONS.map(i => (<button key={i} onClick={() => toggle(i)} className={`px-8 py-4 rounded-full font-black border-2 transition-all ${selected.includes(i) ? 'bg-rose-500 border-rose-500 text-white' : 'border-zinc-100 text-zinc-400'}`}>{i}</button>))}</div>
           <button onClick={save} className="bg-zinc-900 text-white px-20 py-6 rounded-[2.5rem] font-black text-xl hover:scale-105 transition">Entrar no Heartfy</button>
         </div>
       </div>
@@ -453,27 +355,10 @@ export default function App() {
   const Footer = () => (
     <footer className={`mt-40 py-24 border-t ${isDarkMode ? 'bg-zinc-950 border-zinc-800 text-zinc-400' : 'bg-white border-zinc-100 text-zinc-500'}`}>
       <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-12 text-sm font-bold uppercase">
-        <div className="col-span-2 normal-case font-medium">
-          <h2 className="text-3xl font-black text-rose-500 mb-6">HEARTFY</h2>
-          <p className="max-w-xs leading-relaxed">Onde as imagens encontram sentimentos. Colecione inspiração todos os dias.</p>
-        </div>
-        <div>
-          <h4 className="mb-8 opacity-50">Explorar</h4>
-          <ul className="space-y-4 text-[10px] tracking-widest"><li>Sobre Nós</li><li>Blog</li><li>API</li></ul>
-        </div>
-        <div>
-          <h4 className="mb-8 opacity-50">Suporte</h4>
-          <ul className="space-y-4 text-[10px] tracking-widest"><li>FAQ</li><li>Ajuda</li><li>Contacto</li></ul>
-        </div>
-        <div>
-          <h4 className="mb-8 opacity-50">Legal</h4>
-          <ul className="space-y-4 text-[10px] tracking-widest"><li>Privacidade</li><li>Termos</li><li>Cookies</li></ul>
-        </div>
+        <div className="col-span-2 normal-case font-medium"><h2 className="text-3xl font-black text-rose-500 mb-6">HEARTFY</h2><p className="max-w-xs leading-relaxed">Onde as imagens encontram sentimentos. Colecione inspiração todos os dias.</p></div>
+        <div><h4 className="mb-8 opacity-50">Explorar</h4><ul className="space-y-4 text-[10px] tracking-widest"><li>Sobre Nós</li><li>Blog</li><li>API</li></ul></div>
       </div>
-      <div className="max-w-7xl mx-auto px-4 mt-20 pt-10 border-t border-zinc-100 dark:border-zinc-900 flex justify-between text-[10px] font-black opacity-40">
-        <span>© 2025 Heartfy. Viva com beleza.</span>
-        <div className="flex gap-8"><span>Português (Brasil)</span><span>English</span></div>
-      </div>
+      <div className="max-w-7xl mx-auto px-4 mt-20 pt-10 border-t border-zinc-100 dark:border-zinc-900 flex justify-between text-[10px] font-black opacity-40"><span>© 2025 Heartfy. Viva com beleza.</span><div className="flex gap-8"><span>Português (Brasil)</span><span>English</span></div></div>
     </footer>
   );
 
@@ -485,61 +370,24 @@ export default function App() {
         {view === 'pulse' && <PulseView />}
         {view === 'onboarding' && <Onboarding />}
         {view === 'admin' && <AdminPanel />}
-        {view === 'global' && (
-          <div className="pt-24 max-w-4xl mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-6">
-            {users.map(u => (
-              <div key={u.uid} className={`p-8 rounded-[3rem] border flex items-center justify-between ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white shadow-xl'}`}>
-                <div className="flex items-center gap-4">
-                  <img src={u.profilePic} className="w-16 h-16 rounded-full object-cover" alt="U" />
-                  <div><p className="font-black text-lg">@{u.username}</p><Badge badges={u.badges}/></div>
-                </div>
-                {u.uid !== user?.uid && (
-                  <button onClick={() => handleFollow(u.uid)} className={`px-6 py-2 rounded-full font-black text-xs ${currentUserData?.following?.includes(u.uid) ? 'bg-zinc-100' : 'bg-rose-500 text-white'}`}>
-                    {currentUserData?.following?.includes(u.uid) ? 'Seguindo' : 'Seguir'}
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
         {view === 'detail' && selectedPost && (
           <div className="pt-24 max-w-7xl mx-auto px-4 pb-40 animate-in fade-in slide-in-from-bottom-5 duration-700">
              <button onClick={() => setView('home')} className="mb-10 text-rose-500 font-black uppercase text-xs tracking-widest flex items-center gap-2">Voltar</button>
              <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-                <img src={selectedPost.url} className="w-full rounded-[4rem] shadow-2xl border-4 border-white dark:border-zinc-800" alt="Pin" />
+                <img src={selectedPost.url} className="w-full rounded-[4rem] shadow-2xl border-4 border-white dark:border-zinc-800" />
                 <div className="py-8">
-                   <div className="flex items-center justify-between mb-10 p-6 bg-white dark:bg-zinc-900 rounded-[2.5rem] border shadow-sm">
-                      <div className="flex items-center gap-4">
-                        <img src={users.find(u => u.uid === selectedPost.userId)?.profilePic} className="w-14 h-14 rounded-full" alt="A"/>
-                        <p className="font-black text-xl">@{users.find(u => u.uid === selectedPost.userId)?.username}</p>
-                      </div>
-                      <button onClick={() => handleFollow(selectedPost.userId)} className="bg-rose-500 text-white px-10 py-3 rounded-full font-black">Seguir</button>
-                   </div>
+                   <div className="flex items-center justify-between mb-10 p-6 bg-white dark:bg-zinc-900 rounded-[2.5rem] border shadow-sm"><div className="flex items-center gap-4"><img src={users.find(u => u.uid === selectedPost.userId)?.profilePic} className="w-14 h-14 rounded-full" /><p className="font-black text-xl">@{users.find(u => u.uid === selectedPost.userId)?.username}</p></div><button onClick={() => handleFollow(selectedPost.userId)} className="bg-rose-500 text-white px-10 py-3 rounded-full font-black">Seguir</button></div>
                    <h2 className="text-5xl font-black tracking-tighter mb-6">{sanitize(selectedPost.title)}</h2>
                    <p className="text-zinc-500 text-xl font-medium mb-12">{sanitize(selectedPost.description)}</p>
-                   <button onClick={() => handleLike(selectedPost.id)} className={`w-full py-6 rounded-[2.5rem] font-black text-xl flex items-center justify-center gap-4 transition-all ${currentUserData?.likedPosts?.includes(selectedPost.id) ? 'bg-zinc-950 text-white' : 'bg-rose-500 text-white shadow-2xl'}`}>
-                     <Heart className={currentUserData?.likedPosts?.includes(selectedPost.id) ? 'fill-current' : ''} size={28}/> Salvar no Perfil
-                   </button>
+                   <button onClick={() => handleLike(selectedPost.id)} className={`w-full py-6 rounded-[2.5rem] font-black text-xl flex items-center justify-center gap-4 transition-all ${currentUserData?.likedPosts?.includes(selectedPost.id) ? 'bg-zinc-950 text-white' : 'bg-rose-500 text-white shadow-2xl'}`}><Heart className={currentUserData?.likedPosts?.includes(selectedPost.id) ? 'fill-current' : ''} size={28}/> Salvar no Perfil</button>
                 </div>
              </div>
           </div>
         )}
       </main>
       <Footer />
-      {showAuthModal && (
-        <div className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-xl flex items-center justify-center p-6">
-          <div className={`w-full max-w-md p-12 rounded-[4rem] relative ${isDarkMode ? 'bg-zinc-900 border border-zinc-800' : 'bg-white shadow-2xl'}`}>
-            <button onClick={() => setShowAuthModal(false)} className="absolute top-10 right-10 p-2"><X/></button>
-            <h2 className="text-5xl font-black text-rose-500 text-center mb-10">HEARTFY</h2>
-            <button onClick={handleGoogleLogin} className="w-full py-5 bg-white border-4 border-zinc-50 rounded-[2rem] font-black flex items-center justify-center gap-4 hover:shadow-xl transition-all"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-6 h-6" alt="G" /> Entrar com Google</button>
-          </div>
-        </div>
-      )}
-      {toast && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 px-10 py-5 bg-zinc-950 text-white rounded-full font-black text-sm shadow-2xl z-[1000] flex items-center gap-4">
-          <div className="w-2 h-2 bg-rose-500 rounded-full animate-ping"></div> {toast.msg}
-        </div>
-      )}
+      {showAuthModal && (<div className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-xl flex items-center justify-center p-6"><div className={`w-full max-w-md p-12 rounded-[4rem] relative ${isDarkMode ? 'bg-zinc-900 border border-zinc-800' : 'bg-white shadow-2xl'}`}><button onClick={() => setShowAuthModal(false)} className="absolute top-10 right-10 p-2"><X/></button><h2 className="text-5xl font-black text-rose-500 text-center mb-10">HEARTFY</h2><button onClick={handleGoogleLogin} className="w-full py-5 bg-white border-4 border-zinc-50 rounded-[2rem] font-black flex items-center justify-center gap-4 hover:shadow-xl transition-all"><img src="[https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg](https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg)" className="w-6 h-6" /> Entrar com Google</button></div></div>)}
+      {toast && (<div className="fixed bottom-10 left-1/2 -translate-x-1/2 px-10 py-5 bg-zinc-950 text-white rounded-full font-black text-sm shadow-2xl z-[1000] flex items-center gap-4"><div className="w-2 h-2 bg-rose-500 rounded-full animate-ping"></div> {toast.msg}</div>)}
     </div>
   );
 }
